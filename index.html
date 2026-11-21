@@ -13,10 +13,10 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             padding: 20px;
-            text-align: center;
+            box-sizing: border-box;
         }
         .card {
             background: white;
@@ -25,9 +25,35 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             max-width: 400px;
             width: 100%;
+            box-sizing: border-box;
+            text-align: left;
         }
-        h1 { font-size: 1.5rem; margin-bottom: 10px; color: #2c3e50; }
-        p { color: #666; font-size: 0.95rem; margin-bottom: 25px; }
+        h1 { font-size: 1.4rem; margin-top: 0; margin-bottom: 8px; color: #2c3e50; text-align: center; }
+        p { color: #666; font-size: 0.9rem; margin-bottom: 20px; text-align: center; }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 6px;
+        }
+        input[type="text"], input[type="date"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus, input[type="date"]:focus {
+            border-color: #2563eb;
+        }
         .btn {
             background: #2563eb;
             color: white;
@@ -38,9 +64,9 @@
             border-radius: 8px;
             cursor: pointer;
             width: 100%;
-            text-decoration: none;
-            display: inline-block;
+            margin-top: 10px;
             box-sizing: border-box;
+            transition: background 0.2s;
         }
         .btn:active { background: #1d4ed8; }
     </style>
@@ -48,52 +74,76 @@
 <body>
 
 <div class="card">
-    <h1>📚 Library Book Due</h1>
-    <p>Tap below to add your 2-week library return reminder to your phone's calendar.</p>
+    <h1>📚 Library Book Reminder</h1>
+    <p>Enter your book details to generate a calendar reminder.</p>
+    
+    <div class="form-group">
+        <label for="bookName">Book Title</label>
+        <input type="text" id="bookName" placeholder="e.g., The Hobbit">
+    </div>
+    
+    <div class="form-group">
+        <label for="dueDate">Due Date</label>
+        <input type="date" id="dueDate">
+    </div>
+
     <button class="btn" onclick="addToCalendar()">Add to Calendar</button>
 </div>
 
 <script>
-function addToCalendar() {
-    // Set due date to 14 days from today automatically
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 14);
-    
-    // Format date for iCalendar (YYYYMMDD)
-    const year = dueDate.getFullYear();
-    const month = String(dueDate.getMonth() + 1).padStart(2, '0');
-    const day = String(dueDate.getDate()).padStart(2, '0');
-    const dateStr = `${year}${month}${day}`;
+    // Automatically set the date picker default to 14 days from today upon opening
+    window.addEventListener('DOMContentLoaded', () => {
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 14);
+        const yyyy = defaultDate.getFullYear();
+        const mm = String(defaultDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(defaultDate.getDate()).padStart(2, '0');
+        document.getElementById('dueDate').value = `${yyyy}-${mm}-${dd}`;
+    });
 
-    // Generate standard iCalendar (.ics) content locally
-    const icsContent = 
+    function addToCalendar() {
+        const titleInput = document.getElementById('bookName').value.trim();
+        const dateInput = document.getElementById('dueDate').value;
+
+        if (!dateInput) {
+            alert('Please select a due date.');
+            return;
+        }
+
+        const bookTitle = titleInput ? titleInput : 'Library Book';
+        
+        // Convert date format from YYYY-MM-DD to iCalendar YYYYMMDD format
+        const dateStr = dateInput.replace(/-/g, '');
+
+        // Generate iCalendar (.ics) content locally
+        const icsContent = 
 `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Library Bookmark//EN
 BEGIN:VEVENT
-SUMMARY:Library Books Due Back!
-DESCRIPTION:Time to return your library books so you don't get fined.
+SUMMARY:Return Book: ${bookTitle}
+DESCRIPTION:Time to return "${bookTitle}" to the library so you don't get fined.
 DTSTART;VALUE=DATE:${dateStr}
 DTEND;VALUE=DATE:${dateStr}
 BEGIN:VALARM
 TRIGGER:-P1D
-DESCRIPTION:Reminder: Library books due tomorrow
+DESCRIPTION:Reminder: "${bookTitle}" due tomorrow
 ACTION:DISPLAY
 END:VALARM
 END:VEVENT
 END:VCALENDAR`;
 
-    // Create a local blob and trigger download so the phone's native calendar catches it
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'library-due-date.ics';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-}
+        // Trigger local file download
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${bookTitle.toLowerCase().replace(/[^a-z0-9]/g, '-')}-due.ics`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
 </script>
 
 </body>
